@@ -3,7 +3,7 @@ We aim to create AI-Developer agent for code generation. The agent is assumed to
 
 - Architect (Architecture & Tech Specification)
 - Analyst (Tasks & Definition)
-- Researder (Paper & Code)
+- Researcher (Paper & Code)
 - Tester (Comments & Validated code)
 
 The main problem of existing solution is in limited context size, especially when working with multiple code files.
@@ -21,7 +21,8 @@ We want to add smarter context management in order for code generation agent to 
 
 ### Timeline
 - 18.11: Deliverables:
-	- tbd
+	- Conduct research on existing context management techniques for code generation
+ 	- Implement baseline agent for code generation which works within a single file
 - 19.11: Deliverables:
 	- tbd
 - 20.11: Deliverables:
