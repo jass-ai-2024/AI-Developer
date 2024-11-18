@@ -21,8 +21,8 @@ We want to add smarter context management in order for code generation agent to 
 
 ### Timeline
 - 18.11: Deliverables:
-	- Conduct research on existing context management techniques for code generation
- 	- Implement baseline agent for code generation which works within a single file
+	- Conduct research on existing context management techniques for code generation (deliverable: report)
+ 	- Implement baseline agent for code generation which works within a single file (deliverable: agent mini-project)
 - 19.11: Deliverables:
 	- tbd
 - 20.11: Deliverables:
