@@ -34,6 +34,7 @@ We want to add smarter context management in order for code generation agent to 
 - Polina Kirichenko
 - Dmitry Druchinin
 - Kseniia Lysaniuk
+- Ernesto Evgeniy Sanches Shayda 
 
 ### Risks and Mitigation Strategies
 
