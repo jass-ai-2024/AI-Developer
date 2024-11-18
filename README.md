@@ -1,18 +1,23 @@
 ### Overview
-Brief description of the project, its purpose, and main goals.
+We aim to create AI-Developer agent for code generation. The agent is assumed to have input from:
 
+- Architect (Architecture & Tech Specification)
+- Analyst (Tasks & Definition)
+- Researder (Paper & Code)
+- Tester (Comments & Validated code)
+
+The main problem of existing solution is in limited context size, especially when working with multiple code files.
+  
 ###  Problem Statement (technology perspective)
-Clear explanation of the problem this project aims to solve.
+We want to add smarter context management in order for code generation agent to work with larger code base.
 
 ### Objectives
-- Objective 1
-- Objective 2
-- Objective 3
+- Create a code-generation agent
+- Implement context managemer aiming for increasing the number of files in the scope of the context
 
 ### Features
-- Feature 1: Brief description
-- Feature 2: Brief description
-- Feature 3: Brief description
+- The agent should take a user- or other agent generated- input and add generated code into existing project and expand its functionality
+- Dynamic context management
 
 ### Timeline
 - 18.11: Deliverables:
@@ -24,8 +29,10 @@ Clear explanation of the problem this project aims to solve.
 - 21.11: Deliverables:
 	- tbd
 ### Team
-- one
-- two
+- Roman Odobesku 
+- Polina Kirichenko
+- Dmitry Druchinin
+- Kseniia Lysaniuk
 
 ### Risks and Mitigation Strategies
 
