@@ -29,7 +29,7 @@ def read_py_file(file_path):
         return f"Произошла ошибка: {e}"
 
     
-def get_all_files(abs_dir_path: str):
+def get_all_files_docs(abs_dir_path: str):
 
     documents_list = []
 
