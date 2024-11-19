@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 
 from src.logger import LOGGER
 from src.retrievers import create_vectorstore
-from documents import read_py_file
+# from src.documents import read_py_file
 
 load_dotenv()
 
@@ -46,16 +46,17 @@ retriever = create_vectorstore(
 )
 LOGGER.info("retrievers init done")
 
-@tool("search_in_file")
-def search_in_file(query: str, file_path: str):
+@tool("rag_search")
+def rag_search(query: str, file_path: str):
+    """Searches information related to query in particular file"""
     retrieved_docs = retriever.similarity_search(
         query, k=10, 
-        filter={"id": {"$in": [file_path]}}
+        # filter={"id": {"$in": [file_path]}}
     )
     if len(retrieved_docs) == 0:
-        return "Something went wrong. Please try using another tool or rephrasing your query."
+        return f"Something went wrong. Please try using another tool or rephrasing your query. Params: query: {query}, file_path: {file_path}"
     return "".join(["\n```\n" + doc.page_content + "\n```\n" for doc in retrieved_docs])
 
 tools = [
-    search_in_file
+    rag_search
 ]

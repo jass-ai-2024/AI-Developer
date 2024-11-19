@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import Body, FastAPI, HTTPException
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
+# from fastapi_cache import FastAPICache
+# from fastapi_cache.backends.redis import RedisBackend
 from langchain_core.messages import (
     AIMessage,
     HumanMessage,
@@ -22,7 +22,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
 # from redis import asyncio as aioredis
 
-from src.category_definition import define_category
+# from src.category_definition import define_category
 from src.init_tools import tools
 from src.logger import LOGGER
 
@@ -180,7 +180,7 @@ async def _execute_chat_logic(
         LOGGER.info(response)
 
         response = transform_response_format(dict(response))
-        response["query_category"] = define_category(query.text)
+        # response["query_category"] = define_category(query.text)
 
         # response["cache_enabled"] = True
 

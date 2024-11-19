@@ -16,4 +16,4 @@ COPY .env /app/.env
 
 ENV RUN_IN_DOCKER=1
 
-CMD ["python", "./src/init_vectorstores.py"]
+CMD ["python", "-m",  "src.init_vectorstores"]

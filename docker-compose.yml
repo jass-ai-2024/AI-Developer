@@ -15,15 +15,15 @@ services:
 
   pgvector-docs:
     image: pgvector/pgvector:pg16
-    container_name: ${DOCUMENTATION_RETRIEVER_DB}
+    container_name: ${RETRIEVER_DB}
     environment:
-      POSTGRES_USER: ${DOCUMENTATION_RETRIEVER_USER}
-      POSTGRES_PASSWORD: ${DOCUMENTATION_RETRIEVER_PASSWORD}
-      POSTGRES_DB: ${DOCUMENTATION_RETRIEVER_DB}
+      POSTGRES_USER: ${RETRIEVER_USER}
+      POSTGRES_PASSWORD: ${RETRIEVER_PASSWORD}
+      POSTGRES_DB: ${RETRIEVER_DB}
     ports:
-      - "${DOCUMENTATION_RETRIEVER_PORT}:5432"
+      - "${RETRIEVER_PORT}:5432"
     volumes:
-      - ./volumes/${DOCUMENTATION_RETRIEVER_DB}-data:/var/lib/postgresql/data
+      - ./volumes/${RETRIEVER_DB}-data:/var/lib/postgresql/data
 
   # init_vectorstores:
   #   build:
@@ -32,9 +32,6 @@ services:
   #   container_name: init_vectorstores
   #   depends_on:
   #     - pgvector-docs
-  #     - pgvector-ui-samples
-  #     - pgvector-forum
-  #     - pgvector-flowui_trainings
 
   agent_endpoint:
     build:
@@ -47,7 +44,7 @@ services:
       # - init_vectorstores
       - persistence_pg_db
       - pgvector-docs
-      volumes:
+    volumes:
       - ./logs:/app/logs
     restart: on-failure
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info", "--workers", "5"]
@@ -58,10 +55,10 @@ services:
       retries: 3
       start_period: 30s
 
-  autoheal:
-    restart: always
-    image: willfarrell/autoheal
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+  # autoheal:
+  #   restart: always
+  #   image: willfarrell/autoheal
+  #   environment:
+  #     - AUTOHEAL_CONTAINER_LABEL=all
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock

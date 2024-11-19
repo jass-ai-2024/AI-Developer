@@ -11,7 +11,9 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 
 RUN pip3 install --no-cache-dir -r ./requirements.txt
 
-COPY ./data /app/data
+# COPY ./data /app/data
+
+COPY ./test_project /app/test_project
 COPY ./src /app/src
 COPY .env /app/.env
 
