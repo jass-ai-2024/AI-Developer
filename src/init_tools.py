@@ -1,16 +1,17 @@
 import os
+from pathlib import Path
+from typing import Optional
 
 from dotenv import load_dotenv
 from langchain.agents import tool
-
-# from langchain.agents import AgentType, initialize_agent, tool
+from langchain.indexes import SQLRecordManager, index
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.vectorstores import VectorStore
 from langchain_openai import ChatOpenAI
 
 from src.logger import LOGGER
 from src.retrievers import create_vectorstore
-# from src.documents import read_py_file
+from src.documents import get_all_files_docs
 
 load_dotenv()
 
@@ -22,6 +23,45 @@ RUN_IN_DOCKER = os.environ.get("RUN_IN_DOCKER", "").lower() in (
     "1",
 )
 
+def init_vectorstore() -> VectorStore:
+    """Initialize vector store with document indexing"""
+    LOGGER.info("Starting vector store initialization")
+    
+    # Create vector store
+    vectorstore = create_vectorstore(
+        retriever_name=os.getenv("RETRIEVER_DB"),
+        user=os.getenv("RETRIEVER_USER"),
+        password=os.getenv("RETRIEVER_PASSWORD"),
+        port=5432 if RUN_IN_DOCKER else os.getenv("RETRIEVER_PORT"),
+        db=os.getenv("RETRIEVER_DB"),
+        add_docs=False
+    )
+    
+    # Initialize record manager for indexing
+    namespace = "test_project_docs"
+    record_manager = SQLRecordManager(
+        f"postgresql+psycopg://{os.getenv('RETRIEVER_USER')}:{os.getenv('RETRIEVER_PASSWORD')}@"
+        f"{'pgvector-docs' if RUN_IN_DOCKER else 'localhost'}:{5432 if RUN_IN_DOCKER else os.getenv('RETRIEVER_PORT')}/"
+        f"{os.getenv('RETRIEVER_DB')}",
+        namespace
+    )
+    record_manager.create_schema()
+    
+    # Get documents
+    docs = get_all_files_docs(str(Path('./test_project')))
+    LOGGER.info(f"Found {len(docs)} documents to index")
+    
+    # Index documents
+    index(
+        docs,
+        record_manager,
+        vectorstore,
+        cleanup="full",
+        source_id_key="source"
+    )
+    
+    LOGGER.info("Vector store initialization completed")
+    return vectorstore
 
 def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever:
     llm = ChatOpenAI(temperature=0)
@@ -29,22 +69,12 @@ def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever
         retriever=vectorstore.as_retriever(), llm=llm
     )
     multiquery_retriever.include_original = True
-
     return multiquery_retriever
 
-
-LOGGER.info("init start")
-# TODO create retrievers
-
-retriever = create_vectorstore(
-    retriever_name=os.getenv("RETRIEVER_DB"),
-    user=os.getenv("RETRIEVER_USER"),
-    password=os.getenv("RETRIEVER_PASSWORD"),
-    port=5432 if RUN_IN_DOCKER else os.getenv("RETRIEVER_PORT"),
-    db=os.getenv("RETRIEVER_DB"),
-    add_docs=False,
-)
-LOGGER.info("retrievers init done")
+# Initialize vector store and retrievers
+LOGGER.info("Starting tools initialization")
+retriever = init_vectorstore()
+LOGGER.info("Vector store and retrievers initialized")
 
 @tool("rag_search")
 def rag_search(query: str, file_path: str):
