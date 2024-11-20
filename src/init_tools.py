@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
+import time
 from typing import Optional
 
 import shutil
+import subprocess
 
 from dotenv import load_dotenv
 from langchain.agents import tool
@@ -244,25 +246,25 @@ def read_file(file_path):
 #         LOGGER.info("Command not executed.")
 #         return "Command not executed."
 
-@tool('create_directory')
-def create_directory(directory_path: str):
-    """Create a new directory at the specified path."""
-    try:
-        os.makedirs(directory_path, exist_ok=True)
-        LOGGER.info(f"Directory '{directory_path}' created successfully.")
-        return f"Directory '{directory_path}' created successfully."
-    except Exception as e:
-        return f"Failed to create directory. Error: {e}"
+# @tool('create_directory')
+# def create_directory(directory_path: str):
+#     """Create a new directory at the specified path."""
+#     try:
+#         os.makedirs(directory_path, exist_ok=True)
+#         LOGGER.info(f"Directory '{directory_path}' created successfully.")
+#         return f"Directory '{directory_path}' created successfully."
+#     except Exception as e:
+#         return f"Failed to create directory. Error: {e}"
 
-@tool('remove_directory')
-def remove_directory(directory_path: str):
-    """Remove a directory and all its contents at the specified path."""
-    try:
-        shutil.rmtree(directory_path)
-        LOGGER.info(f"Directory '{directory_path}' removed successfully.")
-        return f"Directory '{directory_path}' removed successfully."
-    except Exception as e:
-        return f"Failed to remove directory. Error: {e}"
+# @tool('remove_directory')
+# def remove_directory(directory_path: str):
+#     """Remove a directory and all its contents at the specified path."""
+#     try:
+#         shutil.rmtree(directory_path)
+#         LOGGER.info(f"Directory '{directory_path}' removed successfully.")
+#         return f"Directory '{directory_path}' removed successfully."
+#     except Exception as e:
+#         return f"Failed to remove directory. Error: {e}"
 
 @tool('remove_file')
 def remove_file(file_path: str):
@@ -270,11 +272,11 @@ def remove_file(file_path: str):
     try:
         os.remove(file_path)
         LOGGER.info(f"File '{file_path}' removed successfully.")
-        # Update vector store after file removal
-        update_vectorstore(retriever)
         return f"File '{file_path}' removed successfully."
     except Exception as e:
         return f"Failed to remove file. Error: {e}"
+
+
 
 tools = [
     rag_search,
@@ -284,8 +286,8 @@ tools = [
     # modify_file,
     # commit_changes,
     # run_command_with_confirmation,
-    create_directory,
-    remove_directory,
+    # create_directory,
+    # remove_directory,
     remove_file
 ]
 

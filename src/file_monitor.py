@@ -47,33 +47,3 @@ def check_architecture_file(directory_path: str, interval: int = 5, timeout: Opt
         except Exception as e:
             LOGGER.error(f"Ошибка при проверке директории: {e}")
             return None
-
-def move_to_done(directory_path: str, version: str) -> bool:
-    """
-    Перемещает обработанный файл архитектуры в директорию code_done.
-    
-    Args:
-        directory_path (str): Путь к директории с файлом
-        version (str): Версия файла (например, 'v0')
-    """
-    try:
-        output_directory = os.path.join(directory_path, "code_done")
-        
-        # Создаем директорию code_done, если её нет
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
-            
-        source_file = os.path.join(directory_path, f'arch_services_{version}.json')
-        dest_file = os.path.join(output_directory, f'arch_services_{version}.json')
-        
-        if os.path.exists(source_file):
-            shutil.move(source_file, dest_file)
-            LOGGER.info(f"Файл перемещен в: {dest_file}")
-            return True
-        else:
-            LOGGER.error(f"Исходный файл не найден: {source_file}")
-            return False
-            
-    except Exception as e:
-        LOGGER.error(f"Ошибка при перемещении файла: {e}")
-        return False 

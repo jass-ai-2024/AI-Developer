@@ -3,6 +3,7 @@ import json
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import Body, FastAPI, HTTPException
@@ -21,17 +22,33 @@ from pydantic import BaseModel
 
 from src.init_tools import tools
 from src.logger import LOGGER
+from src.file_monitor import check_architecture_file
 
 load_dotenv(override=True)
 
 LOGGER.info("BEGIN")
 
+# Глобальные переменные
+CURRENT_VERSION: Optional[str] = None
+PROJECT_PATH: Optional[str] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global db_connection
-    global agent
+    global db_connection, agent, CURRENT_VERSION, PROJECT_PATH
+    
+    # Получаем путь к проекту из переменной окружения
+    PROJECT_PATH = os.getenv("PROJECT_PATH", "./test")
+    LOGGER.info(f"Project path: {PROJECT_PATH}")
+    
+    # Ждем появления файла архитектуры
+    CURRENT_VERSION = await wait_for_architecture_file()
+    if not CURRENT_VERSION:
+        LOGGER.error("Failed to get architecture version")
+        raise Exception("Failed to get architecture version")
+    
+    LOGGER.info(f"Architecture version: {CURRENT_VERSION}")
 
+    # Инициализируем PostgreSQL
     DB_URI = f"postgresql://{os.getenv('PERSISTENCE_PG_USER')}:{os.getenv('PERSISTENCE_PG_PASSWORD')}@{os.getenv('PERSISTENCE_PG_CONTAINER')}:{os.getenv('PERSISTENCE_PG_PORT')}/{os.getenv('PERSISTENCE_PG_DB')}?sslmode=disable"
     connection_kwargs = {
         "autocommit": True,
@@ -45,9 +62,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     checkpointer = PostgresSaver(db_connection)
     checkpointer.setup()
 
+    # Инициализируем агента
     agent_llm = ChatOpenAI(
         temperature=0,
-        model="gpt-4o-2024-08-06",
+        model="gpt-4",
         streaming=False,
         openai_api_key=os.getenv("OPENAI_API_KEY"),
     )
@@ -55,14 +73,41 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     system_message = SystemMessage(content=prompt)
 
     agent = create_react_agent(
-        agent_llm, tools=tools, state_modifier=system_message, checkpointer=checkpointer
+        agent_llm, 
+        tools=tools, 
+        state_modifier=system_message,
+        checkpointer=checkpointer
     )
 
     yield
 
+    # Создаем файл завершения с текущей версией
+    await create_done_file()
+    
+    # Закрываем соединение с БД
     if db_connection:
         db_connection.close()
 
+async def wait_for_architecture_file() -> Optional[str]:
+    """Ожидает появления файла архитектуры"""
+    try:
+        version = check_architecture_file(PROJECT_PATH, interval=5, timeout=60)
+        return version
+    except Exception as e:
+        LOGGER.error(f"Error waiting for architecture file: {e}")
+        return None
+
+async def create_done_file():
+    """Создает файл code_done_vX.txt по завершении работы"""
+    if CURRENT_VERSION:
+        try:
+            done_path = os.path.join(PROJECT_PATH, f"code_done_{CURRENT_VERSION}.txt")
+            with open(done_path, "w") as f:
+                f.write(f"version: {CURRENT_VERSION}\n")
+                f.write("status: completed\n")
+            LOGGER.info(f"Created completion file: {done_path}")
+        except Exception as e:
+            LOGGER.error(f"Error creating done file: {e}")
 
 app = FastAPI(lifespan=lifespan)
 
@@ -125,14 +170,11 @@ def transform_response_format(json_new_format):
                 }
                 intermediate_steps.append(step)
 
-    json_old_format = {
+    return {
         "input": input_value,
         "output": output_value,
         "intermediate_steps": intermediate_steps,
     }
-
-    return json_old_format
-
 
 @app.post("/chat")
 async def chat(query: Query = Body(...)):
@@ -141,42 +183,38 @@ async def chat(query: Query = Body(...)):
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Request timed out")
 
-
 async def _execute_chat_logic(query: Query):
     try:
         global agent
         LOGGER.info(f"Task ID: {query.task_id}, Task Type: {query.task_type}")
-
-        task_description = query.task_description
-        LOGGER.info(f"Task Description: {task_description}")
+        LOGGER.info(f"Task Description: {query.task_description}")
 
         config = {"configurable": {"thread_id": query.task_id}}
-        input_message = HumanMessage(content=str(task_description))
+        input_message = HumanMessage(content=str(query.task_description))
         response = agent.invoke({"messages": [input_message]}, config)
 
         response = transform_response_format(dict(response))
-
         LOGGER.info(f"Response: {response}")
 
-        # delete tool calls messages
+        # Очищаем старые сообщения
         messages = agent.get_state(config).values["messages"]
+        
+        # Удаляем сообщения инструментов
         tools_messages = [
             message for message in messages if isinstance(message, ToolMessage)
         ]
-
         ai_tool_calls = [
             message
             for message in messages
             if type(message) is AIMessage
             and len(getattr(message, "tool_calls", [])) > 0
         ]
-
         delete_messages = tools_messages + ai_tool_calls
-
+        
         for message in delete_messages:
             agent.update_state(config, {"messages": RemoveMessage(id=message.id)})
 
-        # delete old messages
+        # Оставляем только последние 10 сообщений
         messages = agent.get_state(config).values["messages"]
         early_messages = messages[:-10]
         for message in early_messages:
@@ -193,14 +231,54 @@ async def _execute_chat_logic(query: Query):
             }
         )
 
-
 @app.get("/health")
 async def health():
+    """
+    Эндпоинт для проверки работоспособности сервера.
+    
+    Returns:
+        str: "OK" если сервер работает
+        HTTPException: 504 если проверка заняла больше 10 секунд
+    """
     try:
+        # Ждем выполнения _execute_health_logic() максимум 10 секунд
         return await asyncio.wait_for(_execute_health_logic(), timeout=10)
     except asyncio.TimeoutError:
+        # Если проверка заняла больше 10 секунд, возвращаем ошибку
         raise HTTPException(status_code=504, detail="Request timed out")
 
 
 async def _execute_health_logic():
-    return "OK"
+    """
+    Логика проверки работоспособности.
+    Здесь можно добавить проверки:
+    - Соединения с базой данных
+    - Доступности OpenAI API
+    - Состояния агента
+    """
+    try:
+        # Проверяем соединение с PostgreSQL
+        if db_connection:
+            async with db_connection.connection() as conn:
+                await conn.execute("SELECT 1")
+        
+        # Проверяем наличие OpenAI API ключа
+        if not os.getenv("OPENAI_API_KEY"):
+            raise Exception("OpenAI API key not found")
+            
+        # Проверяем инициализацию агента
+        if not agent:
+            raise Exception("Agent not initialized")
+            
+        return "OK"
+    except Exception as e:
+        LOGGER.error(f"Health check failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unavailable: {str(e)}"
+        )
+
+if __name__ == "__main__":
+    import uvicorn
+    # Запускаем сервер на порту 8000
+    uvicorn.run(app, host="0.0.0.0", port=8000)
