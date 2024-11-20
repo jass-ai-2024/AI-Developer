@@ -3,8 +3,8 @@ import random
 from pathlib import Path
 from typing import List, Dict
 
-from src.node.modeling_node import FileNode
-from src.retriever import AutoRetriever
+from ..node.modeling_node import FileNode
+from ..retriever import AutoRetriever
 
 random.seed(42)
 
@@ -35,7 +35,6 @@ class RepoTopo():
         for supported_filetype in self.supported_filetypes:
             available_files = list(repo.rglob(f'*{supported_filetype}'))
             files.extend(available_files)
-
         file_nodes = {
             f"{str(file)}": FileNode(
                 repo_path=self.repo_name_or_path,
@@ -49,8 +48,6 @@ class RepoTopo():
             self,
             retriever: AutoRetriever,
             file_node: FileNode,
-            row: int,
-            col: int,
             top_k: List[int] = [5],
             top_p: List[float] = [0.1],
             d_level: int = 1,
@@ -68,7 +65,8 @@ class RepoTopo():
         random.shuffle(other_files)
 
         # get query text from file with row and col
-        query_text = file_node.get_query_text(row, col)
+
+        query_text = file_node.get_query_text(1, 1)
 
         candidate_function_nodes = []
         for node in other_files:
@@ -119,23 +117,24 @@ class RepoTopo():
 
             total_context[f"topp_{p}_topk_{k}"] = context
 
-        current_file_content = self.get_current_context(file_node, row, col)
+            current_file_content = self.get_current_context(file_node)
         current_file_path = str(
             Path(file_node.repo_path).name / Path(file_node.file_path).relative_to(file_node.repo_path))
+
         total_context["current_file"] = {current_file_path: current_file_content}
 
         return total_context
 
-    def get_current_context(self, file_node: FileNode, row: int, col: int) -> str:
+    def get_current_context(self, file_node: FileNode) -> str:
         lines = file_node.content.split('\n')
         return '\n'.join(lines) + '\n'
 
     def get_dependencies(self, file_node, d_level) -> List[FileNode]:
 
         def collect_dependencies(
-            file_node: FileNode,
-            d_level: int,
-            dependencies: List[FileNode],
+                file_node: FileNode,
+                d_level: int,
+                dependencies: List[FileNode],
         ) -> List[FileNode]:
 
             assert d_level >= 0, "Dependency level must be a non-negative integer"
