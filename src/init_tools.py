@@ -38,13 +38,12 @@ def init_vectorstore() -> VectorStore:
     )
     
     # Initialize record manager for indexing
-    namespace = "test_project_docs"
-    record_manager = SQLRecordManager(
+    connection_string = (
         f"postgresql+psycopg://{os.getenv('RETRIEVER_USER')}:{os.getenv('RETRIEVER_PASSWORD')}@"
         f"{'pgvector-docs' if RUN_IN_DOCKER else 'localhost'}:{5432 if RUN_IN_DOCKER else os.getenv('RETRIEVER_PORT')}/"
-        f"{os.getenv('RETRIEVER_DB')}",
-        namespace
+        f"{os.getenv('RETRIEVER_DB')}"
     )
+    record_manager = SQLRecordManager(connection_string=connection_string)
     record_manager.create_schema()
     
     # Get documents
