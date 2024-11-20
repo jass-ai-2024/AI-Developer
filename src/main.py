@@ -6,8 +6,6 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import Body, FastAPI, HTTPException
-# from fastapi_cache import FastAPICache
-# from fastapi_cache.backends.redis import RedisBackend
 from langchain_core.messages import (
     AIMessage,
     HumanMessage,
@@ -20,9 +18,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.prebuilt import create_react_agent
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
-# from redis import asyncio as aioredis
 
-# from src.category_definition import define_category
 from src.init_tools import tools
 from src.logger import LOGGER
 
@@ -35,15 +31,6 @@ LOGGER.info("BEGIN")
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global db_connection
     global agent
-
-    # redis = aioredis.from_url("redis://redis_cache:6379")
-    # FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
-
-    # try:
-    #     await redis.ping()
-    #     LOGGER.info("Successfully connected to Redis")
-    # except Exception as e:
-    #     LOGGER.error(f"Redis connection failed: {e}")
 
     DB_URI = f"postgresql://{os.getenv('PERSISTENCE_PG_USER')}:{os.getenv('PERSISTENCE_PG_PASSWORD')}@{os.getenv('PERSISTENCE_PG_CONTAINER')}:{os.getenv('PERSISTENCE_PG_PORT')}/{os.getenv('PERSISTENCE_PG_DB')}?sslmode=disable"
     connection_kwargs = {
@@ -75,7 +62,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if db_connection:
         db_connection.close()
-    # await redis.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -84,9 +70,9 @@ cache_map = {}
 
 
 class Query(BaseModel):
-    conversation_id: str
-    text: str
-    # cache_enabled: bool
+    task_id: str
+    task_description: dict
+    task_type: str
 
 
 db_connection_pool = None
@@ -162,27 +148,18 @@ async def _execute_chat_logic(
 ):
     try:
         global agent
-        LOGGER.info(f"Query: {query.text}")
+        LOGGER.info(f"Task ID: {query.task_id}, Task Type: {query.task_type}")
 
-        # cache_key = composite_key_builder(chat, query=query)
+        task_description = query.task_description
+        LOGGER.info(f"Task Description: {task_description}")
 
-        # cache_backend = FastAPICache.get_backend()
-
-        # cached_response = await cache_backend.get(cache_key)
-        # if cached_response:
-        #     LOGGER.info("Returning cached response")
-        #     return json.loads(cached_response)
-
-        config = {"configurable": {"thread_id": query.conversation_id}}
-        input_message = HumanMessage(content=query.text)
+        config = {"configurable": {"thread_id": query.task_id}}
+        input_message = HumanMessage(content=str(task_description))
         response = agent.invoke({"messages": [input_message]}, config)
 
-        LOGGER.info(response)
+        # LOGGER.info(response)
 
         response = transform_response_format(dict(response))
-        # response["query_category"] = define_category(query.text)
-
-        # response["cache_enabled"] = True
 
         LOGGER.info(f"Response: {response}")
 
@@ -206,12 +183,10 @@ async def _execute_chat_logic(
 
         # delete old messages
         messages = agent.get_state(config).values["messages"]
-        # TODO вынести -10 в конфиг (это 5 последних вопросов пользователя)
         early_messages = messages[:-10]
         for message in early_messages:
             agent.update_state(config, {"messages": RemoveMessage(id=message.id)})
 
-        # await cache_backend.set(cache_key, json.dumps(response), expire=300)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
