@@ -55,8 +55,35 @@ def rag_search(query: str, file_path: str):
     )
     if len(retrieved_docs) == 0:
         return f"Something went wrong. Please try using another tool or rephrasing your query. Params: query: {query}, file_path: {file_path}"
-    return "".join(["\n```\n" + doc.page_content + "\n```\n" for doc in retrieved_docs])
+    return "".join(["\n```\n" + doc.page_content + "\n```\n" + f'Metadata: {doc.metadata}\n' for doc in retrieved_docs])
+
+@tool('create_file')
+def create_file(file_path, contents):
+    """Create a file with the given name and contents."""
+    try:
+        with open(file_path, "w") as file:
+            file.write(contents)
+        LOGGER.info(f"File '{file_path}' created and filled with content.")
+        return f"File '{file_path}' created and filled with content."
+    except Exception as e:
+        return f'Something went wrong. Error: {e}'
+
+@tool('project_structure')    
+def project_structure(directory_path):
+    """List the project structure of a given directory."""
+    ans = ''
+    for root, dirs, files in os.walk(directory_path):
+        ans += f"Root: {root}\n"
+        ans += f"Directories: {dirs}"
+        ans += f"Files: {files}"
+        
+        LOGGER.info(f"Root: {root}")
+        LOGGER.info(f"Directories: {dirs}")
+        LOGGER.info(f"Files: {files}")
+    return ans
 
 tools = [
-    rag_search
+    rag_search,
+    create_file,
+    project_structure
 ]
