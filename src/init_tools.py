@@ -34,28 +34,36 @@ def init_vectorstore() -> VectorStore:
         password=os.getenv("RETRIEVER_PASSWORD"),
         port=5432 if RUN_IN_DOCKER else os.getenv("RETRIEVER_PORT"),
         db=os.getenv("RETRIEVER_DB"),
-        add_docs=False
+        add_docs=False  # Не добавляем документы через vectorstore напрямую
     )
     
-    # Initialize record manager for indexing
+    # Create connection string for record manager
     connection_string = (
         f"postgresql+psycopg://{os.getenv('RETRIEVER_USER')}:{os.getenv('RETRIEVER_PASSWORD')}@"
         f"{'pgvector-docs' if RUN_IN_DOCKER else 'localhost'}:{5432 if RUN_IN_DOCKER else os.getenv('RETRIEVER_PORT')}/"
         f"{os.getenv('RETRIEVER_DB')}"
     )
-    record_manager = SQLRecordManager(connection_string=connection_string)
+    
+    # Initialize record manager with namespace
+    namespace = f"pgvector/{os.getenv('RETRIEVER_DB')}"
+    record_manager = SQLRecordManager(
+        namespace=namespace,
+        db_url=connection_string
+    )
+    
+    # Create schema for record manager
     record_manager.create_schema()
     
     # Get documents
     docs = get_all_files_docs(str(Path('./test_project')))
     LOGGER.info(f"Found {len(docs)} documents to index")
     
-    # Index documents
+    # Index documents with incremental cleanup
     index(
         docs,
         record_manager,
         vectorstore,
-        cleanup="full",
+        cleanup="incremental",
         source_id_key="source"
     )
     
