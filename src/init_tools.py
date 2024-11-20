@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import shutil
+
 from dotenv import load_dotenv
 from langchain.agents import tool
 from langchain.indexes import SQLRecordManager, index
@@ -119,8 +121,41 @@ def project_structure(directory_path):
         LOGGER.info(f"Files: {files}")
     return ans
 
+@tool('create_directory')
+def create_directory(directory_path: str):
+    """Create a new directory at the specified path."""
+    try:
+        os.makedirs(directory_path, exist_ok=True)
+        LOGGER.info(f"Directory '{directory_path}' created successfully.")
+        return f"Directory '{directory_path}' created successfully."
+    except Exception as e:
+        return f"Failed to create directory. Error: {e}"
+
+@tool('remove_directory')
+def remove_directory(directory_path: str):
+    """Remove a directory and all its contents at the specified path."""
+    try:
+        shutil.rmtree(directory_path)
+        LOGGER.info(f"Directory '{directory_path}' removed successfully.")
+        return f"Directory '{directory_path}' removed successfully."
+    except Exception as e:
+        return f"Failed to remove directory. Error: {e}"
+
+@tool('remove_file')
+def remove_file(file_path: str):
+    """Remove a file at the specified path."""
+    try:
+        os.remove(file_path)
+        LOGGER.info(f"File '{file_path}' removed successfully.")
+        return f"File '{file_path}' removed successfully."
+    except Exception as e:
+        return f"Failed to remove file. Error: {e}"
+
 tools = [
     rag_search,
     create_file,
-    project_structure
+    project_structure,
+    create_directory,
+    remove_directory,
+    remove_file
 ]
