@@ -210,39 +210,92 @@ def project_structure(directory_path):
     return ans
 
 
-# @tool('modify_file')
-# def modify_file(file_path, diff_description):
-#     """Modify file contents by launching the Diff Bot."""
-#     try:
-#         with open(file_path, "r") as file:
-#             original_contents = file.read()
+@tool('overwrite_file')
+def overwrite_file(file_path, contents):
+    """
+    Overwrite a file with the given contents.
+
+    Parameters:
+    - file_path (str): Path to the file to overwrite.
+    - contents (str): The content to write to the file.
+
+    Returns:
+    - str: A success or error message.
+    """
+    try:
+        with open(file_path, 'w') as file:
+            file.write(contents)
+        message = f"File '{file_path}' content overwritten."
+        LOGGER.info(message)
+        update_vectorstore(retriever)  # Update vector store after file modification
+        return message
+    except Exception as e:
+        return f'Something went wrong. Error: {e}'
 
 
-#         LOGGER.info("Launching Diff Bot...")
-#         updated_contents = diff_chain.run(
-#             {"original": original_contents, "diff_description": diff_description})
-#         LOGGER.info(f"Updated contents:\n{updated_contents}")
+@tool('append_to_file')
+def append_to_file(file_path, contents):
+    """
+    Append content to the end of a file.
 
-#         # Simulate user approval step (this may require adaptation for a non-interactive flow)
-#         approval = input(
-#             "Do you want to save these changes to the file? (yes/no): ")
-#         if approval.lower() == "yes":
-#             with open(file_path, "w") as file:
-#                 file.write(updated_contents)
-#             LOGGER.info(f"File '{file_path}' updated successfully.")
-#             return f"File '{file_path}' updated successfully."
-#         else:
-#             LOGGER.info("Changes discarded.")
-#             return "Changes discarded."
-#     except FileNotFoundError:
-#         error_message = f"File '{file_path}' not found."
-#         LOGGER.error(error_message)
-#         return error_message
-#     except Exception as e:
-#         error_message = f"An error occurred: {e}"
-#         LOGGER.error(error_message)
-#         return error_message
+    Parameters:
+    - file_path (str): Path to the file to append to.
+    - contents (str): The content to append.
 
+    Returns:
+    - str: A success or error message.
+    """
+    try:
+        if not os.path.exists(file_path):
+            return f"File '{file_path}' does not exist."
+
+        with open(file_path, 'a') as file:
+            file.write(contents)
+        message = f"Content appended to file '{file_path}'."
+        LOGGER.info(message)
+        update_vectorstore(retriever)  # Update vector store after file modification
+        return message
+    except Exception as e:
+        return f'Something went wrong. Error: {e}'
+
+
+@tool('replace_line_in_file')
+def replace_line_in_file(file_path, contents, line_number):
+    """
+    Replace a specific line in a file with new content.
+
+    Parameters:
+    - file_path (str): Path to the file to modify.
+    - contents (str): The content to replace the line with.
+    - line_number (int): The line number to replace (1-based index).
+
+    Returns:
+    - str: A success or error message.
+    """
+    try:
+        if not os.path.exists(file_path):
+            return f"File '{file_path}' does not exist."
+
+        if line_number is None or not isinstance(line_number, int):
+            return "A valid line_number must be provided."
+
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        if line_number < 1 or line_number > len(lines):
+            return f"Invalid line number. The file has {len(lines)} lines."
+
+        lines[line_number - 1] = contents + '\n'
+
+        with open(file_path, 'w') as file:
+            file.writelines(lines)
+
+        message = f"Line {line_number} in file '{file_path}' replaced."
+        LOGGER.info(message)
+        update_vectorstore(retriever)  # Update vector store after file modification
+        return message
+    except Exception as e:
+        return f'Something went wrong. Error: {e}'
 
 @tool('read_file')
 def read_file(file_path):
@@ -336,7 +389,9 @@ tools = [
     create_file,
     project_structure,
     read_file,
-    # modify_file,
+    replace_line_in_file,
+    append_to_file,
+    overwrite_file,
     # commit_changes,
     # run_command_with_confirmation,
     create_directory,
