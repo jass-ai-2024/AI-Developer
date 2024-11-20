@@ -121,6 +121,87 @@ def project_structure(directory_path):
         LOGGER.info(f"Files: {files}")
     return ans
 
+@tool('modify_file')
+def modify_file(file_path, diff_description):
+    """Modify file contents by launching the Diff Bot."""
+    try:
+        with open(file_path, "r") as file:
+            original_contents = file.read()
+
+        LOGGER.info("Launching Diff Bot...")
+        updated_contents = diff_chain.run(
+            {"original": original_contents, "diff_description": diff_description})
+        LOGGER.info(f"Updated contents:\n{updated_contents}")
+
+        # Simulate user approval step (this may require adaptation for a non-interactive flow)
+        approval = input(
+            "Do you want to save these changes to the file? (yes/no): ")
+        if approval.lower() == "yes":
+            with open(file_path, "w") as file:
+                file.write(updated_contents)
+            LOGGER.info(f"File '{file_path}' updated successfully.")
+            return f"File '{file_path}' updated successfully."
+        else:
+            LOGGER.info("Changes discarded.")
+            return "Changes discarded."
+    except FileNotFoundError:
+        error_message = f"File '{file_path}' not found."
+        LOGGER.error(error_message)
+        return error_message
+    except Exception as e:
+        error_message = f"An error occurred: {e}"
+        LOGGER.error(error_message)
+        return error_message
+
+@tool('read_file')
+def read_file(file_path):
+    """Read and return the contents of a file."""
+    try:
+        with open(file_path, "r") as file:
+            contents = file.read()
+        LOGGER.info(f"Contents of file '{file_path}':\n{contents}")
+        return contents
+    except FileNotFoundError:
+        error_message = f"File '{file_path}' not found."
+        LOGGER.error(error_message)
+        return error_message
+    except Exception as e:
+        error_message = f"An error occurred: {e}"
+        LOGGER.error(error_message)
+        return error_message
+
+@tool('commit_changes')
+def commit_changes(commit_message):
+    """Stage and commit changes using git."""
+    try:
+        run_command_with_confirmation("git add .")
+        run_command_with_confirmation(f"git commit -m '{commit_message}'")
+        LOGGER.info(f"Changes committed with message: {commit_message}")
+        return f"Changes committed with message: '{commit_message}'"
+    except Exception as e:
+        error_message = f"An error occurred while committing changes: {e}"
+        LOGGER.error(error_message)
+        return error_message
+
+@tool('run_command_with_confirmation')
+def run_command_with_confirmation(command):
+    """Run a command after user confirmation."""
+    LOGGER.info(f"Suggested command:\n{command}")
+    approval = input("Do you want to execute this command? (yes/no): ")
+    if approval.lower() == "yes":
+        try:
+            result = subprocess.check_output(
+                command, shell=True, stderr=subprocess.STDOUT)
+            LOGGER.info(result.decode())
+            return result.decode()
+        except subprocess.CalledProcessError as e:
+            error_message = f"Error executing command:\n{e.output.decode()}"
+            LOGGER.error(error_message)
+            return error_message
+    else:
+        LOGGER.info("Command not executed.")
+        return "Command not executed."
+
 @tool('create_directory')
 def create_directory(directory_path: str):
     """Create a new directory at the specified path."""
@@ -155,7 +236,12 @@ tools = [
     rag_search,
     create_file,
     project_structure,
+    modify_file,
+    read_file,
+    commit_changes,
+    run_command_with_confirmation,
     create_directory,
     remove_directory,
     remove_file
 ]
+
