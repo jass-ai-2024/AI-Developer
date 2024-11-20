@@ -1,10 +1,14 @@
+import os
+
 from tree_sitter import Language, Parser
+
 
 class CodeParser:
 
     def __init__(self):
-        # Load the Python language from the compiled shared library
-        self.language = Language('src/python-lang.so', 'python')
+        module_dir = os.path.dirname(os.path.abspath(__file__))
+        so_file_path = os.path.join(module_dir, "python-lang.so")
+        self.language = Language(so_file_path, 'python')
         self.parser = Parser()
         self.parser.set_language(self.language)
 
