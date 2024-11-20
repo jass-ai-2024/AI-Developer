@@ -128,152 +128,89 @@ LOGGER.info("Vector store and retrievers initialized")
 @tool("rag_search")
 def rag_search(query: str, file_path: str):
     """Searches information related to query in particular file"""
-    retrieved_docs = retriever.similarity_search(
-        query, k=10, 
-        # filter={"id": {"$in": [file_path]}}
-    )
-    if len(retrieved_docs) == 0:
-        return f"Something went wrong. Please try using another tool or rephrasing your query. Params: query: {query}, file_path: {file_path}"
-    return "".join(["\n```\n" + doc.page_content + "\n```\n" + f'Metadata: {doc.metadata}\n' for doc in retrieved_docs])
+    LOGGER.info(f"[TOOL CALL] rag_search | Input: query='{query}', file_path='{file_path}'")
+    retrieved_docs = retriever.similarity_search(query, k=10)
+    result = "".join(["\n```\n" + doc.page_content + "\n```\n" + f'Metadata: {doc.metadata}\n' for doc in retrieved_docs])
+    LOGGER.info(f"[TOOL RESULT] rag_search | Found {len(retrieved_docs)} documents")
+    return result if retrieved_docs else f"No results found. Params: query: {query}, file_path: {file_path}"
 
 @tool('create_file')
 def create_file(file_path, contents):
     """Create a file with the given name and contents."""
+    LOGGER.info(f"[TOOL CALL] create_file | Input: file_path='{file_path}', content_length={len(contents)}")
     try:
         with open(file_path, "w") as file:
             file.write(contents)
-        LOGGER.info(f"File '{file_path}' created and filled with content.")
-        # Update vector store after file creation
         update_vectorstore(retriever)
+        LOGGER.info(f"[TOOL RESULT] create_file | File created successfully: '{file_path}'")
         return f"File '{file_path}' created and filled with content."
     except Exception as e:
+        LOGGER.error(f"[TOOL ERROR] create_file | {e}")
         return f'Something went wrong. Error: {e}'
 
 @tool('project_structure')    
 def project_structure(directory_path):
     """List the project structure of a given directory."""
+    LOGGER.info(f"[TOOL CALL] project_structure | Input: directory_path='{directory_path}'")
     ans = ''
     for root, dirs, files in os.walk(directory_path):
         ans += f"Root: {root}\n"
-        ans += f"Directories: {dirs}"
-        ans += f"Files: {files}"
-        
-        LOGGER.info(f"Root: {root}")
-        LOGGER.info(f"Directories: {dirs}")
-        LOGGER.info(f"Files: {files}")
+        ans += f"Directories: {dirs}\n"
+        ans += f"Files: {files}\n"
+    LOGGER.info(f"[TOOL RESULT] project_structure | Scan completed for: '{directory_path}'")
     return ans
-
-# @tool('modify_file')
-# def modify_file(file_path, diff_description):
-#     """Modify file contents by launching the Diff Bot."""
-#     try:
-#         with open(file_path, "r") as file:
-#             original_contents = file.read()
-
-#         LOGGER.info("Launching Diff Bot...")
-#         updated_contents = diff_chain.run(
-#             {"original": original_contents, "diff_description": diff_description})
-#         LOGGER.info(f"Updated contents:\n{updated_contents}")
-
-#         # Simulate user approval step (this may require adaptation for a non-interactive flow)
-#         approval = input(
-#             "Do you want to save these changes to the file? (yes/no): ")
-#         if approval.lower() == "yes":
-#             with open(file_path, "w") as file:
-#                 file.write(updated_contents)
-#             LOGGER.info(f"File '{file_path}' updated successfully.")
-#             return f"File '{file_path}' updated successfully."
-#         else:
-#             LOGGER.info("Changes discarded.")
-#             return "Changes discarded."
-#     except FileNotFoundError:
-#         error_message = f"File '{file_path}' not found."
-#         LOGGER.error(error_message)
-#         return error_message
-#     except Exception as e:
-#         error_message = f"An error occurred: {e}"
-#         LOGGER.error(error_message)
-#         return error_message
 
 @tool('read_file')
 def read_file(file_path):
     """Read and return the contents of a file."""
+    LOGGER.info(f"[TOOL CALL] read_file | Input: file_path='{file_path}'")
     try:
         with open(file_path, "r") as file:
             contents = file.read()
-        LOGGER.info(f"Contents of file '{file_path}':\n{contents}")
+        LOGGER.info(f"[TOOL RESULT] read_file | Successfully read file, content_length={len(contents)}")
         return contents
     except FileNotFoundError:
-        error_message = f"File '{file_path}' not found."
-        LOGGER.error(error_message)
-        return error_message
+        LOGGER.error(f"[TOOL ERROR] read_file | File not found: '{file_path}'")
+        return f"File '{file_path}' not found."
     except Exception as e:
-        error_message = f"An error occurred: {e}"
-        LOGGER.error(error_message)
-        return error_message
-
-# @tool('commit_changes')
-# def commit_changes(commit_message):
-#     """Stage and commit changes using git."""
-#     try:
-#         run_command_with_confirmation("git add .")
-#         run_command_with_confirmation(f"git commit -m '{commit_message}'")
-#         LOGGER.info(f"Changes committed with message: {commit_message}")
-#         return f"Changes committed with message: '{commit_message}'"
-#     except Exception as e:
-#         error_message = f"An error occurred while committing changes: {e}"
-#         LOGGER.error(error_message)
-#         return error_message
-
-# @tool('run_command_with_confirmation')
-# def run_command_with_confirmation(command):
-#     """Run a command after user confirmation."""
-#     LOGGER.info(f"Suggested command:\n{command}")
-#     approval = input("Do you want to execute this command? (yes/no): ")
-#     if approval.lower() == "yes":
-#         try:
-#             result = subprocess.check_output(
-#                 command, shell=True, stderr=subprocess.STDOUT)
-#             LOGGER.info(result.decode())
-#             return result.decode()
-#         except subprocess.CalledProcessError as e:
-#             error_message = f"Error executing command:\n{e.output.decode()}"
-#             LOGGER.error(error_message)
-#             return error_message
-#     else:
-#         LOGGER.info("Command not executed.")
-#         return "Command not executed."
+        LOGGER.error(f"[TOOL ERROR] read_file | {e}")
+        return f"An error occurred: {e}"
 
 @tool('create_directory')
 def create_directory(directory_path: str):
     """Create a new directory at the specified path."""
+    LOGGER.info(f"[TOOL CALL] create_directory | Input: directory_path='{directory_path}'")
     try:
         os.makedirs(directory_path, exist_ok=True)
-        LOGGER.info(f"Directory '{directory_path}' created successfully.")
+        LOGGER.info(f"[TOOL RESULT] create_directory | Directory created successfully")
         return f"Directory '{directory_path}' created successfully."
     except Exception as e:
+        LOGGER.error(f"[TOOL ERROR] create_directory | {e}")
         return f"Failed to create directory. Error: {e}"
 
 @tool('remove_directory')
 def remove_directory(directory_path: str):
     """Remove a directory and all its contents at the specified path."""
+    LOGGER.info(f"[TOOL CALL] remove_directory | Input: directory_path='{directory_path}'")
     try:
         shutil.rmtree(directory_path)
-        LOGGER.info(f"Directory '{directory_path}' removed successfully.")
+        LOGGER.info(f"[TOOL RESULT] remove_directory | Directory removed successfully")
         return f"Directory '{directory_path}' removed successfully."
     except Exception as e:
+        LOGGER.error(f"[TOOL ERROR] remove_directory | {e}")
         return f"Failed to remove directory. Error: {e}"
 
 @tool('remove_file')
 def remove_file(file_path: str):
     """Remove a file at the specified path."""
+    LOGGER.info(f"[TOOL CALL] remove_file | Input: file_path='{file_path}'")
     try:
         os.remove(file_path)
-        LOGGER.info(f"File '{file_path}' removed successfully.")
-        # Update vector store after file removal
         update_vectorstore(retriever)
+        LOGGER.info(f"[TOOL RESULT] remove_file | File removed successfully")
         return f"File '{file_path}' removed successfully."
     except Exception as e:
+        LOGGER.error(f"[TOOL ERROR] remove_file | {e}")
         return f"Failed to remove file. Error: {e}"
 
 tools = [
@@ -281,9 +218,6 @@ tools = [
     create_file,
     project_structure,
     read_file,
-    # modify_file,
-    # commit_changes,
-    # run_command_with_confirmation,
     create_directory,
     remove_directory,
     remove_file
