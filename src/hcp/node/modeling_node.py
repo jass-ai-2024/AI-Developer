@@ -1,7 +1,7 @@
 import os
 
 from typing import List, Dict
-from src.codeparser import CodeParser
+from ..codeparser import CodeParser
 
 codeparser = CodeParser()
 
