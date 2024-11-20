@@ -123,8 +123,6 @@ def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever
     multiquery_retriever.include_original = True
     return multiquery_retriever
 
-<<<<<<< HEAD
-=======
 def update_vectorstore(vectorstore: VectorStore):
     """Update vector store with latest document changes"""
     LOGGER.info("Starting vector store update")
@@ -164,7 +162,6 @@ def update_vectorstore(vectorstore: VectorStore):
         f"Skipped {result['num_skipped']} documents"
     )
     return vectorstore
->>>>>>> baseline
 
 # Initialize vector store and retrievers
 LOGGER.info("Starting tools initialization")
@@ -212,22 +209,14 @@ def project_structure(directory_path):
         LOGGER.info(f"Files: {files}")
     return ans
 
-<<<<<<< HEAD
 
-@tool('modify_file')
-def modify_file(file_path, diff_description):
-    """Modify file contents by launching the Diff Bot."""
-    try:
-        with open(file_path, "r") as file:
-            original_contents = file.read()
-=======
 # @tool('modify_file')
 # def modify_file(file_path, diff_description):
 #     """Modify file contents by launching the Diff Bot."""
 #     try:
 #         with open(file_path, "r") as file:
 #             original_contents = file.read()
->>>>>>> baseline
+
 
 #         LOGGER.info("Launching Diff Bot...")
 #         updated_contents = diff_chain.run(
@@ -272,41 +261,7 @@ def read_file(file_path):
         LOGGER.error(error_message)
         return error_message
 
-<<<<<<< HEAD
 
-@tool('commit_changes')
-def commit_changes(commit_message):
-    """Stage and commit changes using git."""
-    try:
-        run_command_with_confirmation("git add .")
-        run_command_with_confirmation(f"git commit -m '{commit_message}'")
-        LOGGER.info(f"Changes committed with message: {commit_message}")
-        return f"Changes committed with message: '{commit_message}'"
-    except Exception as e:
-        error_message = f"An error occurred while committing changes: {e}"
-        LOGGER.error(error_message)
-        return error_message
-
-
-@tool('run_command_with_confirmation')
-def run_command_with_confirmation(command):
-    """Run a command after user confirmation."""
-    LOGGER.info(f"Suggested command:\n{command}")
-    approval = input("Do you want to execute this command? (yes/no): ")
-    if approval.lower() == "yes":
-        try:
-            result = subprocess.check_output(
-                command, shell=True, stderr=subprocess.STDOUT)
-            LOGGER.info(result.decode())
-            return result.decode()
-        except subprocess.CalledProcessError as e:
-            error_message = f"Error executing command:\n{e.output.decode()}"
-            LOGGER.error(error_message)
-            return error_message
-    else:
-        LOGGER.info("Command not executed.")
-        return "Command not executed."
-=======
 # @tool('commit_changes')
 # def commit_changes(commit_message):
 #     """Stage and commit changes using git."""
@@ -338,7 +293,6 @@ def run_command_with_confirmation(command):
 #     else:
 #         LOGGER.info("Command not executed.")
 #         return "Command not executed."
->>>>>>> baseline
 
 
 @tool('create_directory')
