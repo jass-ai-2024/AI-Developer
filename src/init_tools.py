@@ -123,6 +123,48 @@ def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever
     multiquery_retriever.include_original = True
     return multiquery_retriever
 
+<<<<<<< HEAD
+=======
+def update_vectorstore(vectorstore: VectorStore):
+    """Update vector store with latest document changes"""
+    LOGGER.info("Starting vector store update")
+    
+    # Create connection string for record manager
+    connection_string = (
+        f"postgresql+psycopg://{os.getenv('RETRIEVER_USER')}:{os.getenv('RETRIEVER_PASSWORD')}@"
+        f"{'pgvector-docs' if RUN_IN_DOCKER else 'localhost'}:{5432 if RUN_IN_DOCKER else os.getenv('RETRIEVER_PORT')}/"
+        f"{os.getenv('RETRIEVER_DB')}"
+    )
+    
+    # Initialize record manager with namespace
+    namespace = f"pgvector/{os.getenv('RETRIEVER_DB')}"
+    record_manager = SQLRecordManager(
+        namespace=namespace,
+        db_url=connection_string
+    )
+    
+    # Get latest documents
+    docs = get_all_files_docs(str(Path('./test_project')))
+    LOGGER.info(f"Found {len(docs)} documents to index")
+    
+    # Index documents with incremental cleanup
+    result = index(
+        docs,
+        record_manager,
+        vectorstore,
+        cleanup="incremental",  # Using incremental mode to efficiently handle updates
+        source_id_key="source"
+    )
+    
+    LOGGER.info(
+        f"Vector store update completed: "
+        f"Added {result['num_added']}, "
+        f"Updated {result['num_updated']}, "
+        f"Deleted {result['num_deleted']}, "
+        f"Skipped {result['num_skipped']} documents"
+    )
+    return vectorstore
+>>>>>>> baseline
 
 # Initialize vector store and retrievers
 LOGGER.info("Starting tools initialization")
@@ -149,6 +191,8 @@ def create_file(file_path, contents):
         with open(file_path, "w") as file:
             file.write(contents)
         LOGGER.info(f"File '{file_path}' created and filled with content.")
+        # Update vector store after file creation
+        update_vectorstore(retriever)
         return f"File '{file_path}' created and filled with content."
     except Exception as e:
         return f'Something went wrong. Error: {e}'
@@ -168,6 +212,7 @@ def project_structure(directory_path):
         LOGGER.info(f"Files: {files}")
     return ans
 
+<<<<<<< HEAD
 
 @tool('modify_file')
 def modify_file(file_path, diff_description):
@@ -175,31 +220,39 @@ def modify_file(file_path, diff_description):
     try:
         with open(file_path, "r") as file:
             original_contents = file.read()
+=======
+# @tool('modify_file')
+# def modify_file(file_path, diff_description):
+#     """Modify file contents by launching the Diff Bot."""
+#     try:
+#         with open(file_path, "r") as file:
+#             original_contents = file.read()
+>>>>>>> baseline
 
-        LOGGER.info("Launching Diff Bot...")
-        updated_contents = diff_chain.run(
-            {"original": original_contents, "diff_description": diff_description})
-        LOGGER.info(f"Updated contents:\n{updated_contents}")
+#         LOGGER.info("Launching Diff Bot...")
+#         updated_contents = diff_chain.run(
+#             {"original": original_contents, "diff_description": diff_description})
+#         LOGGER.info(f"Updated contents:\n{updated_contents}")
 
-        # Simulate user approval step (this may require adaptation for a non-interactive flow)
-        approval = input(
-            "Do you want to save these changes to the file? (yes/no): ")
-        if approval.lower() == "yes":
-            with open(file_path, "w") as file:
-                file.write(updated_contents)
-            LOGGER.info(f"File '{file_path}' updated successfully.")
-            return f"File '{file_path}' updated successfully."
-        else:
-            LOGGER.info("Changes discarded.")
-            return "Changes discarded."
-    except FileNotFoundError:
-        error_message = f"File '{file_path}' not found."
-        LOGGER.error(error_message)
-        return error_message
-    except Exception as e:
-        error_message = f"An error occurred: {e}"
-        LOGGER.error(error_message)
-        return error_message
+#         # Simulate user approval step (this may require adaptation for a non-interactive flow)
+#         approval = input(
+#             "Do you want to save these changes to the file? (yes/no): ")
+#         if approval.lower() == "yes":
+#             with open(file_path, "w") as file:
+#                 file.write(updated_contents)
+#             LOGGER.info(f"File '{file_path}' updated successfully.")
+#             return f"File '{file_path}' updated successfully."
+#         else:
+#             LOGGER.info("Changes discarded.")
+#             return "Changes discarded."
+#     except FileNotFoundError:
+#         error_message = f"File '{file_path}' not found."
+#         LOGGER.error(error_message)
+#         return error_message
+#     except Exception as e:
+#         error_message = f"An error occurred: {e}"
+#         LOGGER.error(error_message)
+#         return error_message
 
 
 @tool('read_file')
@@ -219,6 +272,7 @@ def read_file(file_path):
         LOGGER.error(error_message)
         return error_message
 
+<<<<<<< HEAD
 
 @tool('commit_changes')
 def commit_changes(commit_message):
@@ -252,6 +306,39 @@ def run_command_with_confirmation(command):
     else:
         LOGGER.info("Command not executed.")
         return "Command not executed."
+=======
+# @tool('commit_changes')
+# def commit_changes(commit_message):
+#     """Stage and commit changes using git."""
+#     try:
+#         run_command_with_confirmation("git add .")
+#         run_command_with_confirmation(f"git commit -m '{commit_message}'")
+#         LOGGER.info(f"Changes committed with message: {commit_message}")
+#         return f"Changes committed with message: '{commit_message}'"
+#     except Exception as e:
+#         error_message = f"An error occurred while committing changes: {e}"
+#         LOGGER.error(error_message)
+#         return error_message
+
+# @tool('run_command_with_confirmation')
+# def run_command_with_confirmation(command):
+#     """Run a command after user confirmation."""
+#     LOGGER.info(f"Suggested command:\n{command}")
+#     approval = input("Do you want to execute this command? (yes/no): ")
+#     if approval.lower() == "yes":
+#         try:
+#             result = subprocess.check_output(
+#                 command, shell=True, stderr=subprocess.STDOUT)
+#             LOGGER.info(result.decode())
+#             return result.decode()
+#         except subprocess.CalledProcessError as e:
+#             error_message = f"Error executing command:\n{e.output.decode()}"
+#             LOGGER.error(error_message)
+#             return error_message
+#     else:
+#         LOGGER.info("Command not executed.")
+#         return "Command not executed."
+>>>>>>> baseline
 
 
 @tool('create_directory')
@@ -282,6 +369,8 @@ def remove_file(file_path: str):
     try:
         os.remove(file_path)
         LOGGER.info(f"File '{file_path}' removed successfully.")
+        # Update vector store after file removal
+        update_vectorstore(retriever)
         return f"File '{file_path}' removed successfully."
     except Exception as e:
         return f"Failed to remove file. Error: {e}"
@@ -292,10 +381,10 @@ tools = [
     rag_search,
     create_file,
     project_structure,
-    modify_file,
     read_file,
-    commit_changes,
-    run_command_with_confirmation,
+    # modify_file,
+    # commit_changes,
+    # run_command_with_confirmation,
     create_directory,
     remove_directory,
     remove_file
