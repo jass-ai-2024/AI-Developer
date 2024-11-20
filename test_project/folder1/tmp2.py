@@ -1,3 +1,3 @@
-from test_project.tmp1 import tmp1
-
-print(tmp1)
+# tmp2.py
+def calculate_sum(a, b):
+    return a + b
