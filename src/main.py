@@ -143,9 +143,7 @@ async def chat(query: Query = Body(...)):
         raise HTTPException(status_code=504, detail="Request timed out")
 
 
-async def _execute_chat_logic(
-    query: Query = Body(...),
-):
+async def _execute_chat_logic(query: Query):
     try:
         global agent
         LOGGER.info(f"Task ID: {query.task_id}, Task Type: {query.task_type}")
@@ -156,8 +154,6 @@ async def _execute_chat_logic(
         config = {"configurable": {"thread_id": query.task_id}}
         input_message = HumanMessage(content=str(task_description))
         response = agent.invoke({"messages": [input_message]}, config)
-
-        # LOGGER.info(response)
 
         response = transform_response_format(dict(response))
 
@@ -189,7 +185,14 @@ async def _execute_chat_logic(
 
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"{e}")
+        LOGGER.error(f"Error in _execute_chat_logic: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "type": type(e).__name__
+            }
+        )
 
 
 @app.get("/health")
