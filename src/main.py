@@ -88,9 +88,6 @@ def composite_key_builder(func, *args, **kwargs):
 
 
 def transform_response_format(json_new_format):
-    """
-    Переводит ответ langgraph агента (новый формат) в формат langchain (старый). В новом формате отсутствуют индивидуальные мысли по инструментам.
-    """
     messages_list = json_new_format["messages"]
     actual_messages = messages_list
     for i in range(len(messages_list) - 1, -1, -1):
@@ -117,11 +114,13 @@ def transform_response_format(json_new_format):
                             tool_output = next_message.content
                             break
 
+                tool_input = tool_call["args"] if isinstance(tool_call["args"], str) else json.dumps(tool_call["args"])
+                
                 step = {
                     "type": "AgentAction",
                     "thought": message.content,
                     "tool": tool_call["name"],
-                    "tool_input": tool_call["args"]["query"],
+                    "tool_input": tool_input,
                     "tool_output": tool_output,
                 }
                 intermediate_steps.append(step)
