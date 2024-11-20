@@ -11,6 +11,9 @@ from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.vectorstores import VectorStore
 from langchain_openai import ChatOpenAI
 
+from src.hcp.topo import RepoTopo
+from src.hcp.retriever import AutoRetriever
+
 from src.logger import LOGGER
 from src.retrievers import create_vectorstore
 from src.documents import get_all_files_docs
@@ -25,10 +28,49 @@ RUN_IN_DOCKER = os.environ.get("RUN_IN_DOCKER", "").lower() in (
     "1",
 )
 
+
+@tool('get_cross_file_context')
+def get_cross_file_context(repo: str, file: str, top_k: list = [5], top_p: list = [0.3]):
+    """
+    Retrieve the hierarchical cross-file context for a given file in a repository.
+
+    Args:
+        repo (str): Directory path to the repository.
+        file (str): Path to the current file.
+        top_k (list): List of top_k values for retrieval.
+        top_p (list): List of top_p values for retrieval.
+    """
+    try:
+        # Initialize the RepoTopo object
+        repo_topo = RepoTopo(repo)
+
+        # Define the retriever used to retrieve the related functions
+        auto_retriever = AutoRetriever(engine='openai')
+
+        # Get the file node object of the current file
+        file_node = repo_topo.file_nodes.get(file)
+        if file_node is None:
+            return f"File '{file}' not found in file_nodes."
+
+        # Get the hierarchical cross-file context
+        cross_file_context = repo_topo.get_hierarchical_cross_file_context(
+            auto_retriever,
+            file_node,
+            top_k=top_k,
+            top_p=top_p,
+        )
+
+        LOGGER.info(f"Successfully retrieved cross-file context for file '{file}'.")
+        return cross_file_context
+
+    except Exception as e:
+        return f"Failed to retrieve cross-file context. Error: {e}"
+
+
 def init_vectorstore() -> VectorStore:
     """Initialize vector store with document indexing"""
     LOGGER.info("Starting vector store initialization")
-    
+
     # Create vector store
     vectorstore = create_vectorstore(
         retriever_name=os.getenv("RETRIEVER_DB"),
@@ -38,28 +80,28 @@ def init_vectorstore() -> VectorStore:
         db=os.getenv("RETRIEVER_DB"),
         add_docs=False  # Не добавляем документы через vectorstore напрямую
     )
-    
+
     # Create connection string for record manager
     connection_string = (
         f"postgresql+psycopg://{os.getenv('RETRIEVER_USER')}:{os.getenv('RETRIEVER_PASSWORD')}@"
         f"{'pgvector-docs' if RUN_IN_DOCKER else 'localhost'}:{5432 if RUN_IN_DOCKER else os.getenv('RETRIEVER_PORT')}/"
         f"{os.getenv('RETRIEVER_DB')}"
     )
-    
+
     # Initialize record manager with namespace
     namespace = f"pgvector/{os.getenv('RETRIEVER_DB')}"
     record_manager = SQLRecordManager(
         namespace=namespace,
         db_url=connection_string
     )
-    
+
     # Create schema for record manager
     record_manager.create_schema()
-    
+
     # Get documents
     docs = get_all_files_docs(str(Path('./test_project')))
     LOGGER.info(f"Found {len(docs)} documents to index")
-    
+
     # Index documents with incremental cleanup
     index(
         docs,
@@ -68,9 +110,10 @@ def init_vectorstore() -> VectorStore:
         cleanup="incremental",
         source_id_key="source"
     )
-    
+
     LOGGER.info("Vector store initialization completed")
     return vectorstore
+
 
 def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever:
     llm = ChatOpenAI(temperature=0)
@@ -80,21 +123,24 @@ def create_multiquery_retriever(vectorstore: VectorStore) -> MultiQueryRetriever
     multiquery_retriever.include_original = True
     return multiquery_retriever
 
+
 # Initialize vector store and retrievers
 LOGGER.info("Starting tools initialization")
 retriever = init_vectorstore()
 LOGGER.info("Vector store and retrievers initialized")
 
+
 @tool("rag_search")
 def rag_search(query: str, file_path: str):
     """Searches information related to query in particular file"""
     retrieved_docs = retriever.similarity_search(
-        query, k=10, 
+        query, k=10,
         # filter={"id": {"$in": [file_path]}}
     )
     if len(retrieved_docs) == 0:
         return f"Something went wrong. Please try using another tool or rephrasing your query. Params: query: {query}, file_path: {file_path}"
     return "".join(["\n```\n" + doc.page_content + "\n```\n" + f'Metadata: {doc.metadata}\n' for doc in retrieved_docs])
+
 
 @tool('create_file')
 def create_file(file_path, contents):
@@ -107,7 +153,8 @@ def create_file(file_path, contents):
     except Exception as e:
         return f'Something went wrong. Error: {e}'
 
-@tool('project_structure')    
+
+@tool('project_structure')
 def project_structure(directory_path):
     """List the project structure of a given directory."""
     ans = ''
@@ -115,11 +162,12 @@ def project_structure(directory_path):
         ans += f"Root: {root}\n"
         ans += f"Directories: {dirs}"
         ans += f"Files: {files}"
-        
+
         LOGGER.info(f"Root: {root}")
         LOGGER.info(f"Directories: {dirs}")
         LOGGER.info(f"Files: {files}")
     return ans
+
 
 @tool('modify_file')
 def modify_file(file_path, diff_description):
@@ -153,6 +201,7 @@ def modify_file(file_path, diff_description):
         LOGGER.error(error_message)
         return error_message
 
+
 @tool('read_file')
 def read_file(file_path):
     """Read and return the contents of a file."""
@@ -170,6 +219,7 @@ def read_file(file_path):
         LOGGER.error(error_message)
         return error_message
 
+
 @tool('commit_changes')
 def commit_changes(commit_message):
     """Stage and commit changes using git."""
@@ -182,6 +232,7 @@ def commit_changes(commit_message):
         error_message = f"An error occurred while committing changes: {e}"
         LOGGER.error(error_message)
         return error_message
+
 
 @tool('run_command_with_confirmation')
 def run_command_with_confirmation(command):
@@ -202,6 +253,7 @@ def run_command_with_confirmation(command):
         LOGGER.info("Command not executed.")
         return "Command not executed."
 
+
 @tool('create_directory')
 def create_directory(directory_path: str):
     """Create a new directory at the specified path."""
@@ -211,6 +263,7 @@ def create_directory(directory_path: str):
         return f"Directory '{directory_path}' created successfully."
     except Exception as e:
         return f"Failed to create directory. Error: {e}"
+
 
 @tool('remove_directory')
 def remove_directory(directory_path: str):
@@ -222,6 +275,7 @@ def remove_directory(directory_path: str):
     except Exception as e:
         return f"Failed to remove directory. Error: {e}"
 
+
 @tool('remove_file')
 def remove_file(file_path: str):
     """Remove a file at the specified path."""
@@ -232,7 +286,9 @@ def remove_file(file_path: str):
     except Exception as e:
         return f"Failed to remove file. Error: {e}"
 
+
 tools = [
+    get_cross_file_context,
     rag_search,
     create_file,
     project_structure,
@@ -244,4 +300,3 @@ tools = [
     remove_directory,
     remove_file
 ]
-
