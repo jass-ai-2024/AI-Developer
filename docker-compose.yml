@@ -48,7 +48,7 @@ services:
       - ./test_project:/app/test_project
       - ./logs:/app/logs
     restart: on-failure
-    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info", "--workers", "5"]
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]  #  "--workers", "5"
     healthcheck:
       test: curl --fail http://localhost:8000/health || exit 1
       interval: 10s
