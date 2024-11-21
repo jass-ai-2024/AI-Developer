@@ -4,6 +4,7 @@ services:
   persistence_pg_db:
     image: postgres:16
     container_name: ${PERSISTENCE_PG_CONTAINER}
+    platform: linux/amd64
     environment:
       POSTGRES_USER: ${PERSISTENCE_PG_USER}
       POSTGRES_PASSWORD: ${PERSISTENCE_PG_PASSWORD}
@@ -16,6 +17,7 @@ services:
   pgvector-docs:
     image: pgvector/pgvector:pg16
     container_name: ${RETRIEVER_DB}
+    platform: linux/amd64
     environment:
       POSTGRES_USER: ${RETRIEVER_USER}
       POSTGRES_PASSWORD: ${RETRIEVER_PASSWORD}
@@ -25,41 +27,25 @@ services:
     volumes:
       - ./volumes/${RETRIEVER_DB}-data:/var/lib/postgresql/data
 
-  # init_vectorstores:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile_init_vectorstore
-  #   container_name: init_vectorstores
-  #   depends_on:
-  #     - pgvector-docs
-
   agent_endpoint:
     build:
       context: .
       dockerfile: Dockerfile_fastapi
     container_name: agent_endpoint
+    platform: linux/amd64
     ports:
       - "8000:8000"
     depends_on:
-      # - init_vectorstores
       - persistence_pg_db
       - pgvector-docs
     volumes:
       - ./test_project:/app/test_project
       - ./logs:/app/logs
     restart: on-failure
-    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]  #  "--workers", "5"
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
     healthcheck:
       test: curl --fail http://localhost:8000/health || exit 1
       interval: 10s
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  # autoheal:
-  #   restart: always
-  #   image: willfarrell/autoheal
-  #   environment:
-  #     - AUTOHEAL_CONTAINER_LABEL=all
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
