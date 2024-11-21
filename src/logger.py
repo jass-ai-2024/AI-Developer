@@ -1,17 +1,16 @@
 import logging
-import sys
 
-LOGGER = logging.getLogger("logger")
+# Настройка логгера
+LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
-console_handler = logging.StreamHandler(stream=sys.stdout)
+# Создание обработчика для вывода в консоль
+console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(
-    logging.Formatter(fmt="[%(asctime)s: %(levelname)s] %(message)s")
-)
-LOGGER.addHandler(console_handler)
 
-# file_handler = logging.FileHandler('./logs/agent_endpoint.log')
-# file_handler.setLevel(logging.INFO)
-# file_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s: %(levelname)s] %(message)s"))
-# LOGGER.addHandler(file_handler)
+# Создание форматтера
+formatter = logging.Formatter('[%(asctime)s: %(levelname)s] %(message)s')
+console_handler.setFormatter(formatter)
+
+# Добавление обработчика к логгеру
+LOGGER.addHandler(console_handler)

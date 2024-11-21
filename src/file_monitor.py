@@ -1,9 +1,9 @@
 import os
 import time
 import json
-import shutil
 from typing import Optional
 from src.logger import LOGGER
+from pathlib import Path
 
 def check_architecture_file(directory_path: str, interval: int = 5, timeout: Optional[int] = None) -> Optional[str]:
     """
@@ -47,3 +47,83 @@ def check_architecture_file(directory_path: str, interval: int = 5, timeout: Opt
         except Exception as e:
             LOGGER.error(f"Ошибка при проверке директории: {e}")
             return None
+        
+def create_empty_project_structure(version: str, base_dir: str = "test") -> bool:
+    """
+    Создает структуру проекта с пустыми файлами после проверки версии архитектуры
+    
+    Args:
+        version: Версия архитектуры (arch_services_v*)
+        base_dir: Базовая директория для создания проекта
+    """
+    try:
+        # Проверка входных параметров
+        if not version or not version.strip():
+            LOGGER.error("Version cannot be empty")
+            return False
+            
+        if not isinstance(base_dir, str) or not base_dir.strip():
+            LOGGER.error("Base directory path must be a non-empty string")
+            return False
+            
+        # Создаем базовую директорию, если её нет
+        base_path = Path(base_dir)
+        base_path.mkdir(exist_ok=True)
+        LOGGER.info(f"Base directory created/verified: {base_dir}")
+
+        # Проверка прав доступа
+        try:
+            test_file = base_path / ".test_write_access"
+            test_file.touch()
+            test_file.unlink()
+        except (PermissionError, OSError) as e:
+            LOGGER.error(f"No write permission in directory {base_dir}: {e}")
+            return False
+
+        # Создаем корневую директорию проекта
+        project_path = base_path / f"project_{version}"
+        project_path.mkdir(exist_ok=True)
+        LOGGER.info(f"Project directory created: {project_path}")
+        
+        # Структура директорий и файлов
+        directories = [
+            "backend",
+            "frontend/public",
+            "frontend/src"
+        ]
+        
+        files = [
+            "backend/Dockerfile",
+            "backend/main.py",
+            "backend/requirements.txt",
+            "backend/.env",
+            "frontend/public/index.html",
+            "frontend/src/App.js",
+            "frontend/src/index.js",
+            "frontend/.gitignore",
+            "frontend/Dockerfile",
+            "frontend/package.json",
+            "frontend/.env",
+            "docker-compose.yml",
+            "README.md"
+        ]
+
+        # Создаем директории
+        for directory in directories:
+            dir_path = project_path / directory
+            dir_path.mkdir(parents=True, exist_ok=True)
+            LOGGER.info(f"Created directory: {dir_path}")
+
+        # Создаем пустые файлы
+        for file in files:
+            file_path = project_path / file
+            file_path.parent.mkdir(parents=True, exist_ok=True)  # Создаем родительские директории
+            file_path.touch()
+            LOGGER.info(f"Created empty file: {file_path}")
+
+        LOGGER.info(f"Project structure created successfully for version {version}")
+        return True
+
+    except Exception as e:
+        LOGGER.error(f"Error creating project structure: {e}")
+        return False
