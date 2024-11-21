@@ -25,14 +25,6 @@ services:
     volumes:
       - ./volumes/${RETRIEVER_DB}-data:/var/lib/postgresql/data
 
-  # init_vectorstores:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile_init_vectorstore
-  #   container_name: init_vectorstores
-  #   depends_on:
-  #     - pgvector-docs
-
   agent_endpoint:
     build:
       context: .
@@ -41,12 +33,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      # - init_vectorstores
       - persistence_pg_db
       - pgvector-docs
     volumes:
       - ./test_project:/app/test_project
-      - ./logs:/app/logs
     restart: on-failure
     command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]  #  "--workers", "5"
     healthcheck:

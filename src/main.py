@@ -18,6 +18,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.prebuilt import create_react_agent
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel
+from langchain_core.runnables import RunnableConfig
 
 from src.init_tools import tools
 from src.logger import LOGGER
@@ -150,7 +151,11 @@ async def _execute_chat_logic(query: Query):
         task_description = query.task_description
         LOGGER.info(f"Task Description: {task_description}")
 
-        config = {"configurable": {"thread_id": query.task_id}}
+        config = RunnableConfig(
+            configurable={"thread_id": query.task_id},
+            recursion_limit=100
+        )
+        
         input_message = HumanMessage(content=str(task_description))
         response = agent.invoke({"messages": [input_message]}, config)
 

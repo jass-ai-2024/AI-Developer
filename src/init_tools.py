@@ -129,6 +129,7 @@ LOGGER.info("Vector store and retrievers initialized")
 def rag_search(query: str, file_path: str):
     """Searches information related to query in particular file"""
     LOGGER.info(f"[TOOL CALL] rag_search | Input: query='{query}', file_path='{file_path}'")
+    update_vectorstore(retriever)
     retrieved_docs = retriever.similarity_search(query, k=10)
     result = "".join(["\n```\n" + doc.page_content + "\n```\n" + f'Metadata: {doc.metadata}\n' for doc in retrieved_docs])
     LOGGER.info(f"[TOOL RESULT] rag_search | Found {len(retrieved_docs)} documents")
@@ -141,7 +142,6 @@ def create_file(file_path, contents):
     try:
         with open(file_path, "w") as file:
             file.write(contents)
-        update_vectorstore(retriever)
         LOGGER.info(f"[TOOL RESULT] create_file | File created successfully: '{file_path}'")
         return f"File '{file_path}' created and filled with content."
     except Exception as e:
@@ -182,7 +182,7 @@ def create_directory(directory_path: str):
     LOGGER.info(f"[TOOL CALL] create_directory | Input: directory_path='{directory_path}'")
     try:
         os.makedirs(directory_path, exist_ok=True)
-        LOGGER.info(f"[TOOL RESULT] create_directory | Directory created successfully")
+        LOGGER.info(f"[TOOL RESULT] create_directory | Directory {directory_path} created successfully")
         return f"Directory '{directory_path}' created successfully."
     except Exception as e:
         LOGGER.error(f"[TOOL ERROR] create_directory | {e}")
@@ -194,7 +194,7 @@ def remove_directory(directory_path: str):
     LOGGER.info(f"[TOOL CALL] remove_directory | Input: directory_path='{directory_path}'")
     try:
         shutil.rmtree(directory_path)
-        LOGGER.info(f"[TOOL RESULT] remove_directory | Directory removed successfully")
+        LOGGER.info(f"[TOOL RESULT] remove_directory | Directory {directory_path} removed successfully")
         return f"Directory '{directory_path}' removed successfully."
     except Exception as e:
         LOGGER.error(f"[TOOL ERROR] remove_directory | {e}")
@@ -206,8 +206,7 @@ def remove_file(file_path: str):
     LOGGER.info(f"[TOOL CALL] remove_file | Input: file_path='{file_path}'")
     try:
         os.remove(file_path)
-        update_vectorstore(retriever)
-        LOGGER.info(f"[TOOL RESULT] remove_file | File removed successfully")
+        LOGGER.info(f"[TOOL RESULT] remove_file | File {file_path} removed successfully")
         return f"File '{file_path}' removed successfully."
     except Exception as e:
         LOGGER.error(f"[TOOL ERROR] remove_file | {e}")
