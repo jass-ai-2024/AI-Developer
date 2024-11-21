@@ -1,4 +1,4 @@
-import os
+import tree_sitter_python as tspython
 
 from tree_sitter import Language, Parser
 
@@ -6,9 +6,7 @@ from tree_sitter import Language, Parser
 class CodeParser:
 
     def __init__(self):
-        module_dir = os.path.dirname(os.path.abspath(__file__))
-        so_file_path = os.path.join(module_dir, "python-lang.so")
-        self.language = Language(so_file_path, 'python')
+        self.language = Language(tspython.language(), 'python')
         self.parser = Parser()
         self.parser.set_language(self.language)
 
