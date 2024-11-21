@@ -39,6 +39,32 @@ def get_cross_file_context(repo: str, file: str, top_k: list = [5], top_p: list 
         file (str): Path to the current file.
         top_k (list): List of top_k values for retrieval.
         top_p (list): List of top_p values for retrieval.
+
+    Returns:
+        dict: A dictionary containing the hierarchical cross-file context.
+
+        The structure of the returned dictionary is as follows:
+        - "topp_<p>_topk_<k>": Contextual information for a specific top_k and top_p combination.
+            - Keys: Relative paths of the files providing the context.
+            - Values: Content of the files or functions, prioritized by relevance.
+        - "current_file": Contextual information about the current file.
+            - Keys: Relative path of the current file.
+            - Values: Content of the current file.
+
+    Example Output:
+        {
+            "topp_0.3_topk_5": {
+                "repo/file1.py": "def function1(): ...",
+                "repo/file2.py": "class Class1: ..."
+            },
+            "topp_0.1_topk_10": {
+                "repo/file3.py": "def function2(): ...",
+                "repo/file4.py": "class Class2: ..."
+            },
+            "current_file": {
+                "repo/current_file.py": "def current_function(): ..."
+            }
+        }
     """
     try:
         # Initialize the RepoTopo object
