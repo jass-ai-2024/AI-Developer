@@ -22,6 +22,7 @@ from langchain_core.runnables import RunnableConfig
 
 from src.init_tools import tools
 from src.logger import LOGGER
+from src.init_endpoint_agent import agents
 
 load_dotenv(override=True)
 
@@ -31,7 +32,6 @@ LOGGER.info("BEGIN")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global db_connection
-    global agent
 
     DB_URI = f"postgresql://{os.getenv('PERSISTENCE_PG_USER')}:{os.getenv('PERSISTENCE_PG_PASSWORD')}@{os.getenv('PERSISTENCE_PG_CONTAINER')}:{os.getenv('PERSISTENCE_PG_PORT')}/{os.getenv('PERSISTENCE_PG_DB')}?sslmode=disable"
     connection_kwargs = {
@@ -45,19 +45,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     checkpointer = PostgresSaver(db_connection)
     checkpointer.setup()
-
-    agent_llm = ChatOpenAI(
-        temperature=0,
-        model="gpt-4o-2024-08-06",
-        streaming=False,
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
-    )
-    prompt = os.getenv("agent_prefix_prompt")
-    system_message = SystemMessage(content=prompt)
-
-    agent = create_react_agent(
-        agent_llm, tools=tools, state_modifier=system_message, checkpointer=checkpointer
-    )
 
     yield
 
@@ -77,7 +64,6 @@ class Query(BaseModel):
 
 
 db_connection_pool = None
-agent = None
 
 
 def composite_key_builder(func, *args, **kwargs):
@@ -145,9 +131,15 @@ async def chat(query: Query = Body(...)):
 
 async def _execute_chat_logic(query: Query):
     try:
-        global agent
         LOGGER.info(f"Task ID: {query.task_id}, Task Type: {query.task_type}")
 
+        if query.task_type not in agents:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid task type. Must be one of: {list(agents.keys())}"
+            )
+
+        agent = agents[query.task_type]
         task_description = query.task_description
         LOGGER.info(f"Task Description: {task_description}")
 
