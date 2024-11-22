@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  persistence_pg_db:
+    image: postgres:16
+    container_name: ${PERSISTENCE_PG_CONTAINER}
+    environment:
+      POSTGRES_USER: ${PERSISTENCE_PG_USER}
+      POSTGRES_PASSWORD: ${PERSISTENCE_PG_PASSWORD}
+      POSTGRES_DB: ${PERSISTENCE_PG_DB}
+    ports:
+      - "${PERSISTENCE_PG_PORT}:5432"
+    volumes:
+      - ./volumes/${PERSISTENCE_PG_CONTAINER}-data:/var/lib/postgresql/data
+
+  pgvector-docs:
+    image: pgvector/pgvector:pg16
+    container_name: ${RETRIEVER_DB}
+    environment:
+      POSTGRES_USER: ${RETRIEVER_USER}
+      POSTGRES_PASSWORD: ${RETRIEVER_PASSWORD}
+      POSTGRES_DB: ${RETRIEVER_DB}
+    ports:
+      - "${RETRIEVER_PORT}:5432"
+    volumes:
+      - ./volumes/${RETRIEVER_DB}-data:/var/lib/postgresql/data
+
+  agent_endpoint:
+    build:
+      context: .
+      dockerfile: Dockerfile_fastapi
+    container_name: agent_endpoint
+    ports:
+      - "8000:8000"
+    depends_on:
+      - persistence_pg_db
+      - pgvector-docs
+    volumes:
+      - ./test_project:/app/test_project
+    restart: on-failure
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]  #  "--workers", "5"
+    healthcheck:
+      test: curl --fail http://localhost:8000/health || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+
+  agent_monitor:
+      build:
+        context: .
+        dockerfile: Dockerfile_agent_monitor
+      container_name: agent_monitor
+      volumes:
+        - ./test_project:/app/test_project
+      depends_on:
+        - agent_endpoint
+        - persistence_pg_db
+        - pgvector-docs
+      restart: on-failure
+
+
+  agent_integration:
+    build:
+      context: .
+      dockerfile: Dockerfile_agent_integration
+    container_name: agent_integration
+    volumes:
+      - ./test_project:/app/test_project
+    depends_on:
+      - agent_endpoint
+      - agent_monitor
+      - persistence_pg_db
+      - pgvector-docs
+    restart: on-failure
+
+
+  agent_breakdown:
+    build:
+      context: .
+      dockerfile: Dockerfile_agent_breakdown
+    container_name: agent_breakdown
+    volumes:
+      - ./test_project:/app/test_project
+    depends_on:
+      - agent_endpoint
+      - persistence_pg_db
+      - pgvector-docs
+    restart: on-failure
+
+
+  # autoheal:
+  #   restart: always
+  #   image: willfarrell/autoheal
+  #   environment:
+  #     - AUTOHEAL_CONTAINER_LABEL=all
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock

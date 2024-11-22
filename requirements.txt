@@ -1,0 +1,30 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+wsproto==1.2.0
+websockets==12.0
+openai==1.43.0
+langchain==0.2.15
+langgraph==0.2.14
+elasticsearch==8.7.0
+python-dotenv==1.0.0
+beautifulsoup4==4.12.2
+lxml==4.9.2
+tiktoken==0.7.0
+fastapi==0.111.0
+sentence-transformers==2.2.2
+chromadb==0.5.0
+torch==2.2.2
+playwright==1.39.0
+streamlit==1.28.2
+unstructured==0.11.6
+selenium==4.16.0
+httplib2==0.22.0
+numexpr==2.8.8
+langchain-community==0.2.14
+langchain-openai==0.1.23
+langchainhub==0.1.21
+langchain-postgres==0.0.9
+langgraph-checkpoint-postgres==1.0.7
+psycopg[binary,pool]==3.1.19
+# fastapi-cache2==0.2.2
+# redis[asyncio]==4.6.0
