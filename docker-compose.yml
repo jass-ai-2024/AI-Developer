@@ -46,6 +46,50 @@ services:
       retries: 3
       start_period: 30s
 
+
+  agent_monitor:
+      build:
+        context: .
+        dockerfile: Dockerfile_agent_monitor
+      container_name: agent_monitor
+      volumes:
+        - ./test_project:/app/test_project
+      depends_on:
+        - agent_endpoint
+        - persistence_pg_db
+        - pgvector-docs
+      restart: on-failure
+
+
+  agent_integration:
+    build:
+      context: .
+      dockerfile: Dockerfile_agent_integration
+    container_name: agent_integration
+    volumes:
+      - ./test_project:/app/test_project
+    depends_on:
+      - agent_endpoint
+      - agent_monitor
+      - persistence_pg_db
+      - pgvector-docs
+    restart: on-failure
+
+
+  agent_breakdown:
+    build:
+      context: .
+      dockerfile: Dockerfile_agent_breakdown
+    container_name: agent_breakdown
+    volumes:
+      - ./test_project:/app/test_project
+    depends_on:
+      - agent_endpoint
+      - persistence_pg_db
+      - pgvector-docs
+    restart: on-failure
+
+
   # autoheal:
   #   restart: always
   #   image: willfarrell/autoheal

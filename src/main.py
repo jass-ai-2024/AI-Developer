@@ -29,30 +29,30 @@ load_dotenv(override=True)
 LOGGER.info("BEGIN")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global db_connection
+# @asynccontextmanager
+# async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+#     global db_connection
 
-    DB_URI = f"postgresql://{os.getenv('PERSISTENCE_PG_USER')}:{os.getenv('PERSISTENCE_PG_PASSWORD')}@{os.getenv('PERSISTENCE_PG_CONTAINER')}:{os.getenv('PERSISTENCE_PG_PORT')}/{os.getenv('PERSISTENCE_PG_DB')}?sslmode=disable"
-    connection_kwargs = {
-        "autocommit": True,
-        "prepare_threshold": 0,
-    }
-    db_connection = ConnectionPool(
-        conninfo=DB_URI,
-        max_size=20,
-        kwargs=connection_kwargs,
-    )
-    checkpointer = PostgresSaver(db_connection)
-    checkpointer.setup()
+#     DB_URI = f"postgresql://{os.getenv('PERSISTENCE_PG_USER')}:{os.getenv('PERSISTENCE_PG_PASSWORD')}@{os.getenv('PERSISTENCE_PG_CONTAINER')}:{os.getenv('PERSISTENCE_PG_PORT')}/{os.getenv('PERSISTENCE_PG_DB')}?sslmode=disable"
+#     connection_kwargs = {
+#         "autocommit": True,
+#         "prepare_threshold": 0,
+#     }
+#     db_connection = ConnectionPool(
+#         conninfo=DB_URI,
+#         max_size=20,
+#         kwargs=connection_kwargs,
+#     )
+#     checkpointer = PostgresSaver(db_connection)
+#     checkpointer.setup()
 
-    yield
+#     yield
 
-    if db_connection:
-        db_connection.close()
+#     if db_connection:
+#         db_connection.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()  # lifespan=lifespan
 
 cache_map = {}
 

@@ -30,6 +30,7 @@ PROJECT_STRUCTURE_TOOLS = [
 TASK_BREAKDOWN_TOOLS = [
     project_structure,
     read_file,
+    create_file,
     rag_search
 ]
 
